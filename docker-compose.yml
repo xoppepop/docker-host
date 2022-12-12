@@ -1,0 +1,89 @@
+#https://www.programonaut.com/how-to-automate-ssl-with-docker-and-nginx/
+services:
+    nginx:
+        container_name: nginx
+        image: nginxproxy/nginx-proxy
+        restart: unless-stopped
+        networks:
+            - wan_docker_network
+        #ports:
+        #    - 80:80
+        #    - 443:443
+        volumes:
+            - /var/run/docker.sock:/tmp/docker.sock:ro
+            - /var/docker/nginx/html:/usr/share/nginx/html
+            - /var/docker/nginx/certs:/etc/nginx/certs
+            - /var/docker/nginx/vhost:/etc/nginx/vhost.d
+        logging:
+            options:
+                max-size: "10m"
+                max-file: "3"
+
+    letsencrypt-companion:
+        container_name: letsencrypt-companion
+        image: jrcs/letsencrypt-nginx-proxy-companion
+        restart: unless-stopped
+        networks:
+            - wan_docker_network
+        volumes_from:
+            - nginx
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - /var/docker/nginx/acme:/etc/acme.sh
+        environment:
+            DEFAULT_EMAIL: xoppepop@gmail.com
+  #https://github.com/portainer/portainer-compose/blob/master/docker-stack.yml
+  agent:
+    image: portainer/agent
+    environment:
+      # REQUIRED: Should be equal to the service name prefixed by "tasks." when
+      # deployed inside an overlay network
+      AGENT_CLUSTER_ADDR: tasks.agent
+      # AGENT_PORT: 9001
+      # LOG_LEVEL: debug
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
+    networks:
+      - lan_docker_network
+  
+  portainer:
+    image: portainer/portainer
+    command: -H tcp://tasks.agent:9001 --tlsskipverify
+    expose:
+     - "8080"
+        environment:
+            VIRTUAL_HOST: p.sync.com.ua
+            LETSENCRYPT_HOST: p.sync.com.ua    
+    #ports:
+    #  - "9000:9000"
+    #  - "8000:8000"
+    volumes:
+      - portainer_data:/data
+    networks:
+      - lan_docker_network
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+        
+    #hello-world:
+    #    container_name: hello-world
+    #    image: kornkitti/express-hello-world
+    #    expose:
+    #        - "8080"
+    #    environment:
+    #        VIRTUAL_HOST: test.programonaut.com
+    #        LETSENCRYPT_HOST: test.programonaut.com
+    
+    portainer
+    
+    networks:
+        wan_docker_network:
+          name: wan_docker_network
+          external: true
+        lan_docker_network:
+          name: lan_docker_network
+          
+        
