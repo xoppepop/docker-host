@@ -8,4 +8,4 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.
 sudo apt-get --yes update
 sudo apt-get --yes install docker-ce docker-ce-cli containerd.io docker-compose-plugin
 # for services
-sudo docker swarm init
+docker swarm init #--advertise-addr xxx.xxx.xxx.xxx
